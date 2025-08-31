@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>FaceAuth Pro | Secure Facial Authentication</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              300: '#7dd3fc',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .face-outline {
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5);
+      border-radius: 50%;
+    }
+    .video-container {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .face-feedback {
+      position: absolute;
+      top: 10px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-4xl">
+    <div class="md:flex">
+      <!-- Left side - Info -->
+      <div class="md:w-2/5 bg-gradient-to-b from-primary-700 to-primary-900 text-white p-8 flex flex-col">
+        <div>
+          <h1 class="text-3xl font-bold mb-2">FaceAuth Pro</h1>
+          <p class="text-primary-200 mb-6">Secure facial recognition authentication system</p>
+        </div>
+        <div class="mt-auto">
+          <div class="flex items-center mb-4">
+            <div class="bg-primary-500 rounded-full p-2 mr-3">
+              <i class="fas fa-shield-alt text-white"></i>
+            </div>
+            <p>Advanced facial recognition technology</p>
+          </div>
+          <div class="flex items-center mb-4">
+            <div class="bg-primary-500 rounded-full p-2 mr-3">
+              <i class="fas fa-bolt text-white"></i>
+            </div>
+            <p>Fast and seamless authentication</p>
+          </div>
+          <div class="flex items-center">
+            <div class="bg-primary-500 rounded-full p-2 mr-3">
+              <i class="fas fa-lock text-white"></i>
+            </div>
+            <p>Your data is always encrypted and secure</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right side - Form -->
+      <div class="md:w-3/5 py-8 px-6 md:px-10">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-2">
+          {% if session.logged_in %}Welcome back!{% else %}Secure Access{% endif %}
+        </h2>
+        <p class="text-gray-600 text-center mb-6">
+          {% if session.logged_in %}
+            You are authenticated as <span class="font-medium">{{ session.email }}</span>
+          {% else %}
+            Use facial recognition to login or register
+          {% endif %}
+        </p>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="p-3 mb-4 rounded-lg {% if category == 'success' %}bg-green-100 text-green-800{% elif category == 'error' %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% if not session.logged_in %}
+        <form id="face-form" method="POST" action="/submit">
+          <div class="mb-4">
+            <label for="email" class="block text-gray-700 font-medium mb-2">Email Address</label>
+            <div class="relative">
+              <input type="email" name="email" id="email" placeholder="you@example.com" required 
+                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+              <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                <i class="fas fa-envelope text-gray-400"></i>
+              </div>
+            </div>
+            <div id="email-status" class="text-sm mt-1"></div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Authentication Method</label>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <input type="radio" name="mode" id="login-mode" value="login" class="hidden peer" checked>
+                <label for="login-mode" class="flex items-center justify-center p-3 border border-gray-300 rounded-lg cursor-pointer peer-checked:border-primary-500 peer-checked:bg-primary-50 peer-checked:ring-2 peer-checked:ring-primary-200">
+                  <span class="text-gray-700 peer-checked:text-primary-800">Login</span>
+                </label>
+              </div>
+              <div>
+                <input type="radio" name="mode" id="register-mode" value="register" class="hidden peer">
+                <label for="register-mode" class="flex items-center justify-center p-3 border border-gray-300 rounded-lg cursor-pointer peer-checked:border-primary-500 peer-checked:bg-primary-50 peer-checked:ring-2 peer-checked:ring-primary-200">
+                  <span class="text-gray-700 peer-checked:text-primary-800">Register</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-gray-700 font-medium mb-2">Face Capture</label>
+            <div class="video-container mb-3">
+              <div class="face-feedback hidden" id="face-feedback">
+                <span class="bg-green-500 text-white text-sm font-medium px-3 py-1 rounded-full">
+                  <i class="fas fa-check-circle mr-1"></i> Face detected
+                </span>
+              </div>
+              <video id="video" autoplay playsinline class="w-full h-auto rounded-lg"></video>
+            </div>
+            
+            <div class="flex justify-center space-x-3 mb-3">
+              <button type="button" id="capture" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-camera mr-2"></i> Capture
+              </button>
+              <button type="button" id="retake" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center hidden">
+                <i class="fas fa-redo mr-2"></i> Retake
+              </button>
+            </div>
+            
+            <div class="relative hidden" id="preview-container">
+              <span class="absolute -top-2 -right-2 bg-primary-500 text-white rounded-full w-6 h-6 flex items-center justify-center">
+                <i class="fas fa-check text-xs"></i>
+              </span>
+              <img id="preview" alt="Captured preview" class="w-full max-w-xs mx-auto rounded-lg shadow-md" />
+            </div>
+            
+            <p class="text-sm text-gray-600 text-center mt-3">
+              <i class="fas fa-lightbulb text-yellow-500 mr-1"></i>
+              Ensure good lighting and face the camera directly
+            </p>
+          </div>
+
+          <input type="hidden" name="image_data" id="image_data" />
+          
+          <button type="submit" id="submit-btn" class="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+            <span id="submit-text">Authenticate</span>
+            <div id="submit-spinner" class="hidden ml-2">
+              <i class="fas fa-circle-notch fa-spin"></i>
+            </div>
+          </button>
+        </form>
+        {% else %}
+        <div class="text-center py-4">
+          <div class="bg-green-100 text-green-800 p-4 rounded-lg mb-6">
+            <i class="fas fa-check-circle text-4xl mb-3"></i>
+            <h3 class="font-medium text-lg">Authentication Successful</h3>
+            <p>You are logged in as <span class="font-semibold">{{ session.email }}</span></p>
+          </div>
+          <a href="/logout" class="inline-block bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded-lg transition duration-300">
+            <i class="fas fa-sign-out-alt mr-2"></i>Logout
+          </a>
+        </div>
+        {% endif %}
+        
+        <div class="mt-6 pt-6 border-t border-gray-200">
+          <p class="text-xs text-gray-500 text-center">
+            By using this service, you agree to our 
+            <a href="#" class="text-primary-600 hover:text-primary-800">Privacy Policy</a> and 
+            <a href="#" class="text-primary-600 hover:text-primary-800">Terms of Service</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const captureBtn = document.getElementById("capture");
+    const retakeBtn = document.getElementById("retake");
+    const preview = document.getElementById("preview");
+    const previewContainer = document.getElementById("preview-container");
+    const imageDataInput = document.getElementById("image_data");
+    const faceFeedback = document.getElementById("face-feedback");
+    const submitBtn = document.getElementById("submit-btn");
+    const submitText = document.getElementById("submit-text");
+    const submitSpinner = document.getElementById("submit-spinner");
+    const emailInput = document.getElementById("email");
+    const emailStatus = document.getElementById("email-status");
+    const loginMode = document.getElementById("login-mode");
+    const registerMode = document.getElementById("register-mode");
+    
+    let stream = null;
+    let faceDetectionInterval = null;
+
+    async function initCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } 
+        });
+        video.srcObject = stream;
+        startFaceDetection();
+      } catch (err) {
+        showError("Could not access the webcam: " + err.message);
+      }
+    }
+
+    function startFaceDetection() {
+      faceDetectionInterval = setInterval(() => {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          const vw = video.videoWidth;
+          const vh = video.videoHeight;
+          if (vw && vh) {
+            const hasFace = Math.random() > 0.3; // fake detection
+            if (hasFace) {
+              faceFeedback.classList.remove("hidden");
+              video.classList.add("face-outline");
+            } else {
+              faceFeedback.classList.add("hidden");
+              video.classList.remove("face-outline");
+            }
+          }
+        }
+      }, 1000);
+    }
+
+    function stopFaceDetection() {
+      if (faceDetectionInterval) {
+        clearInterval(faceDetectionInterval);
+        faceDetectionInterval = null;
+      }
+      faceFeedback.classList.add("hidden");
+      video.classList.remove("face-outline");
+    }
+
+    captureBtn.addEventListener("click", () => {
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      if (!vw || !vh) {
+        showError("Video not ready yet. Wait a second and try again.");
+        return;
+      }
+      canvas.width = vw;
+      canvas.height = vh;
+      ctx.drawImage(video, 0, 0, vw, vh);
+      
+      // ✅ Smaller size: JPEG instead of PNG
+      const dataURL = canvas.toDataURL("image/jpeg", 0.7);
+      imageDataInput.value = dataURL;
+
+      preview.src = dataURL;
+      previewContainer.classList.remove("hidden");
+      captureBtn.classList.add("hidden");
+      retakeBtn.classList.remove("hidden");
+      stopFaceDetection();
+    });
+
+    retakeBtn.addEventListener("click", () => {
+      previewContainer.classList.add("hidden");
+      imageDataInput.value = "";
+      captureBtn.classList.remove("hidden");
+      retakeBtn.classList.add("hidden");
+      startFaceDetection();
+    });
+
+    emailInput.addEventListener("blur", () => {
+      const email = emailInput.value.trim();
+      if (!email) return;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        emailStatus.textContent = "Please enter a valid email address";
+        emailStatus.className = "text-sm mt-1 text-red-600";
+        return;
+      }
+      fetch("/check_email", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ email: email })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.registered) {
+          emailStatus.textContent = "This email is registered. Select Login to continue.";
+          emailStatus.className = "text-sm mt-1 text-green-600";
+          loginMode.checked = true;
+        } else {
+          emailStatus.textContent = "This email is not registered. Select Register to create an account.";
+          emailStatus.className = "text-sm mt-1 text-blue-600";
+          registerMode.checked = true;
+        }
+      })
+      .catch(err => console.error("Error checking email:", err));
+    });
+
+    document.getElementById("face-form").addEventListener("submit", (e) => {
+      if (!imageDataInput.value) {
+        e.preventDefault();
+        showError("Please capture an image before submitting.");
+        return;
+      }
+      submitText.textContent = "Processing...";
+      submitSpinner.classList.remove("hidden");
+      submitBtn.disabled = true;
+    });
+
+    function showError(message) {
+      const errorDiv = document.createElement("div");
+      errorDiv.className = "fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-lg z-50";
+      errorDiv.innerHTML = `<div class="flex items-center"><i class="fas fa-exclamation-circle mr-2"></i><p>${message}</p></div>`;
+      document.body.appendChild(errorDiv);
+      setTimeout(() => errorDiv.remove(), 5000);
+    }
+
+    window.addEventListener("load", initCamera);
+  </script>
+</body>
+</html>
